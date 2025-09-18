@@ -4,12 +4,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestBody;
+
 import lombok.Data;
 import server.ems.models.userModel;
 import server.ems.repository.userRepo;
 import server.ems.services.OtpService;
+import server.ems.services.emailService;
 import server.ems.utils.jwt;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 
 @RestController
@@ -31,17 +35,25 @@ public class authController {
         if(userRepository.findByEmail(req.getEmail()).isPresent()){
             return ResponseEntity.badRequest().body("User already exists");
         }
+        String otp = otpService.generateOTP(req.getEmail());
 
+        emailService.sendIndividualMail(req.getEmail(), "Your OTP Code", "Your OTP code is: " + otp + ". It is valid for 5 minutes.");
+        return ResponseEntity.status(HttpStatus.CREATED).body("OTP sent to email");
+    }
 
-        String otp = otpService.generateOTP();
-
-        userModel user = new userModel();
-        user.setEmail(req.getEmail());
-        user.setPassword(encoder.encode(req.getPassword()));
-        user.setRole("employee");
-        userRepository.save(user);
+    @PostMapping("/verify")
+    public ResponseEntity<?> verify(@RequestBody String otp, @RequestBody String email, @RequestBody String password) {
+        String storedOtp = otpService.redisTemplate.opsForValue().get(email);
+        if (storedOtp == null || !storedOtp.equals(otp)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired OTP");
+        }
+        userModel entity = new userModel();
+        entity.setEmail(email);
+        entity.setPassword(encoder.encode(password));
+        userRepository.save(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
     }
+    
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req) {

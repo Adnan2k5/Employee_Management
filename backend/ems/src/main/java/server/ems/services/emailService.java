@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class emailService {
-    private final JavaMailSender mailSender;
+    private static JavaMailSender mailSender;
 
     public emailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+        emailService.mailSender = mailSender;
     }
 
-    public void sendIndividualMail(String to, String subject, String body){
+    public static void sendIndividualMail(String to, String subject, String body){
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setSubject(subject);

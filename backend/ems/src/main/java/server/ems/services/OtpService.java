@@ -9,11 +9,9 @@ import java.util.concurrent.TimeUnit;
 public class OtpService {
     
     @Autowired
-    private StringRedisTemplate redisTemplate;
+    public StringRedisTemplate redisTemplate;
     
     public String generateOTP(String email) {
-
-        
         int otp = (int)(Math.random() * 900000) + 100000;
         String optStr = String.valueOf(otp);
         redisTemplate.opsForValue().set(email, optStr);
