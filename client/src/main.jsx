@@ -6,33 +6,36 @@ import { Login } from './Pages/Auth/Login'
 import { Register } from './pages/auth/Register'
 import { useEffect, useState } from 'react'
 import { Provider } from 'react-redux'
-import store from './context/userContext'
-import { userContext } from './context/userContext'
+import store, { clearUser, setUser, setLoading } from './context/userContext'
 import { validateUser } from './api/authcontroller'
+import { Auth } from './security/Auth'
+import { UserLoggedIn } from './security/loginAuth'
 import { Loader } from './components/Loader'
+import EmployeeDashboard from './pages/dashboard'
 
 function App() {
 
-  const [loading, setLoading] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
   useEffect(() => {
     const res = async () => {
-      setLoading(true);
+      store.dispatch(setLoading(true));
       try {
         const response = await validateUser();
         if (response.status == 200) {
-          store.dispatch(userContext.actions.setUser(response.data));
+          store.dispatch(setUser(response.data));
+        } else {
+          store.dispatch(setLoading(false));
         }
       } catch (error) {
-        store.dispatch(userContext.actions.clearUser());
+        store.dispatch(setLoading(false));
       }
       finally {
-        setLoading(false);
+        setAppLoading(false);
       }
     }
     res();
   }, []);
-
-  if (loading) {
+  if (appLoading) {
     return <Loader />;
   }
   return (
@@ -40,8 +43,13 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path='/register' element={<Register />} />
+          <Route path="/login" element={<UserLoggedIn><Login /></UserLoggedIn>} />
+          <Route path='/register' element={<UserLoggedIn><Register /></UserLoggedIn>} />
+          <Route path='/dashboard' element={
+            <Auth>
+              <EmployeeDashboard />
+            </Auth>
+          } />
         </Routes>
       </BrowserRouter>
     </Provider >
