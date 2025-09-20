@@ -28,6 +28,9 @@ public class authController {
 
     @Autowired
     private OtpService otpService;
+    
+    @Autowired
+    private emailService emailService;
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @PostMapping("/register")
@@ -37,7 +40,7 @@ public class authController {
         }
         String otp = otpService.generateOTP(req.getEmail());
 
-        emailService.sendIndividualMail(req.getEmail(), "Your OTP Code", "Your OTP code is: " + otp + ". It is valid for 5 minutes.");
+        this.emailService.sendIndividualMail(req.getEmail(), "Your OTP Code", "Your OTP code is: " + otp + ". It is valid for 5 minutes.");
         return ResponseEntity.status(HttpStatus.CREATED).body("OTP sent to email");
     }
 

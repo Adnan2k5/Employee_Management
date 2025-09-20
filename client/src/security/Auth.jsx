@@ -25,14 +25,3 @@ export const Auth = ({ children }) => {
     return children;
 }
 
-
-export const userLoggedIn = ({ children }) => {
-    const user = useSelector((state) => state.user);
-    if (!user.isLoading && user.isAuthenticated) {
-        navigate('/dashboard', { replace: true });
-    }
-    if (user.isLoading) {
-        return <Loader />;
-    }
-    return children;
-}
