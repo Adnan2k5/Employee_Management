@@ -4,6 +4,7 @@ const userContext = createSlice({
   name: "user",
   initialState: {
     isAuthenticated: false,
+    isLoading: false,
     user: {
       name: null,
       email: null,
@@ -11,18 +12,23 @@ const userContext = createSlice({
     },
   },
   reducers: {
+    setLoading: (state, action) => {
+      state.isLoading = action.payload;
+    },
     setUser: (state, action) => {
       state.user = action.payload;
       state.isAuthenticated = true;
+      state.isLoading = false;
     },
     clearUser: (state) => {
       state.user = null;
       state.isAuthenticated = false;
+      state.isLoading = false;
     },
   },
 });
 
-export const { setUser, clearUser } = userContext.actions;
+export const { setLoading, setUser, clearUser } = userContext.actions;
 
 const store = configureStore({
   reducer: {

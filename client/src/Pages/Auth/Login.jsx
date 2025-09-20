@@ -1,11 +1,24 @@
 import { useForm } from "react-hook-form"
+import { useDispatch } from "react-redux"
+import { useNavigate } from "react-router-dom"
+import { setUser } from "../../context/userContext"
 import { login } from "../../api/authcontroller";
+
 export const Login = () => {
     const { register, handleSubmit } = useForm();
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
     const handleLogin = async (data) => {
-        console.log(data);
-        const res = await login(data);
-        console.log(res);
+        try {
+            const res = await login(data);
+            if (res.status === 200) {
+                dispatch(setUser(res.data));
+                navigate('/dashboard');
+            }
+        } catch (error) {
+            console.error('Login failed:', error);
+        }
     }
     return (
         <main className="login w-screen bg-gradient-to-tr to-[#ebedee] from-[#c4d7ee] h-screen flex items-center justify-center">
