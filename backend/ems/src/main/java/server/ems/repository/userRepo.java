@@ -8,4 +8,5 @@ import server.ems.models.userModel;
 
 public interface userRepo extends MongoRepository<userModel, String> {
     Optional<userModel> findByEmail(String email);
+    Optional<userModel> findById(String id);
 }

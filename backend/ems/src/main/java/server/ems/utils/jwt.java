@@ -13,7 +13,7 @@ import io.jsonwebtoken.security.Keys;
 
 @Service
 public class jwt {
-    private String secretKey = "secretKey123";
+    private String secretKey = "superlongsecretkeythatishugeandsecure123456";
     private long expirationTime = 86400000;
 
     private Key getSignKey(){
