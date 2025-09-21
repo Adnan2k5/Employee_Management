@@ -1,12 +1,14 @@
 import { Calendar, X } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { use, useState } from 'react'
 import { Button } from '../../../components/ui/button'
 import CalendarComponent from '../../../components/calender'
+import { useSelector } from 'react-redux'
+import { submitLeave } from '../../../api/employeeController'
 
 export const LeaveRequest = ({ onClose }) => {
     const [selectedDates, setSelectedDates] = useState([])
     const [reason, setReason] = useState('')
-
+    const { user } = useSelector((state) => state.user);
     const handleDateSelect = (date) => {
         if (selectedDates.length === 0) {
             // First date selection
@@ -62,7 +64,7 @@ export const LeaveRequest = ({ onClose }) => {
         return diffDays
     }
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (selectedDates.length === 0) {
             alert('Please select at least one date for your leave')
             return
@@ -79,13 +81,11 @@ export const LeaveRequest = ({ onClose }) => {
             startDate: selectedDates[0],
             endDate: selectedDates.length === 2 ? selectedDates[1] : selectedDates[0],
             dayCount: getDayCount(),
-            reason: reason.trim()
+            reason: reason.trim(),
+            employeeMail: user.email
         }
-
-        console.log('Leave request submitted:', leaveData)
-        // Here you would send the data to your backend
-        // submitLeaveRequest(leaveData)
-
+        const res = await submitLeave(leaveData);
+        console.log(res);
         onClose()
     }
 
