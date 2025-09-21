@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { Button } from "../components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
-export default function CalendarComponent({ selectedDate, onDateSelect }) {
+export default function CalendarComponent({ selectedDates = [], onDateSelect, onDateRemove }) {
     const [currentMonth, setCurrentMonth] = useState(new Date())
 
     const monthNames = [
@@ -62,8 +62,33 @@ export default function CalendarComponent({ selectedDate, onDateSelect }) {
     }
 
     const isSelected = (date) => {
-        if (!date || !selectedDate) return false
-        return date.toDateString() === selectedDate.toDateString()
+        if (!date || !selectedDates.length) return false
+        return selectedDates.some(selectedDate =>
+            date.toDateString() === selectedDate.toDateString()
+        )
+    }
+
+    const isInRange = (date) => {
+        if (!date || selectedDates.length !== 2) return false
+        const [startDate, endDate] = selectedDates.sort((a, b) => a - b)
+        return date > startDate && date < endDate
+    }
+
+    const isRangeStart = (date) => {
+        if (!date || selectedDates.length !== 2) return false
+        const [startDate] = selectedDates.sort((a, b) => a - b)
+        return date.toDateString() === startDate.toDateString()
+    }
+
+    const isRangeEnd = (date) => {
+        if (!date || selectedDates.length !== 2) return false
+        const [, endDate] = selectedDates.sort((a, b) => a - b)
+        return date.toDateString() === endDate.toDateString()
+    }
+
+    const handleRemoveDate = (date, e) => {
+        e.stopPropagation()
+        onDateRemove && onDateRemove(date)
     }
 
     const hasEvent = (date) => {
@@ -106,27 +131,38 @@ export default function CalendarComponent({ selectedDate, onDateSelect }) {
                 {days.map((date, index) => (
                     <div key={index} className="aspect-square">
                         {date ? (
-                            <Button
-                                variant={isSelected(date) ? "default" : "ghost"}
-                                className={`w-full h-full p-0 relative ${isToday(date) ? "ring-2 ring-primary" : ""
-                                    } ${hasEvent(date) ? "bg-accent/20" : ""}`}
-                                onClick={() => onDateSelect(date)}
-                            >
-                                <span className="text-sm">{date.getDate()}</span>
-                                {hasEvent(date) && (
-                                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                            <div className="relative w-full h-full">
+                                <Button
+                                    variant={isSelected(date) ? "default" : "ghost"}
+                                    className={`w-full h-full p-0 relative ${isToday(date) ? "ring-2 ring-primary" : ""
+                                        } ${hasEvent(date) ? "bg-accent/20" : ""
+                                        } ${isInRange(date) ? "bg-blue-100 hover:bg-blue-200" : ""
+                                        } ${isRangeStart(date) ? "rounded-r-none" : ""
+                                        } ${isRangeEnd(date) ? "rounded-l-none" : ""
+                                        } ${isInRange(date) ? "rounded-none" : ""
+                                        }`}
+                                    onClick={() => onDateSelect && onDateSelect(date)}
+                                >
+                                    <span className="text-sm">{date.getDate()}</span>
+                                    {hasEvent(date) && (
+                                        <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                                    )}
+                                </Button>
+                                {isSelected(date) && (
+                                    <button
+                                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 z-10 shadow-sm"
+                                        onClick={(e) => handleRemoveDate(date, e)}
+                                        title="Remove this date"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
                                 )}
-                            </Button>
+                            </div>
                         ) : (
                             <div className="w-full h-full" />
                         )}
                     </div>
                 ))}
-            </div>
-
-            {/* Google Calendar Integration Note */}
-            <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">📅 Connected to Google Calendar - Events sync automatically</p>
             </div>
         </div>
     )
