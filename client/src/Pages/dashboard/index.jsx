@@ -58,7 +58,7 @@ export default function EmployeeDashboard() {
                     <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                         <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
                             <AvatarImage src="/professional-woman-diverse.png" alt={user?.name} />
-                            <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                     </div>
                 </div>
@@ -77,7 +77,7 @@ export default function EmployeeDashboard() {
                                         <div className="relative flex-shrink-0">
                                             <Avatar className="w-16 h-16 sm:w-20 sm:h-20">
                                                 <AvatarImage src="/professional-woman-diverse.png" alt={user?.name} />
-                                                <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+                                                <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                                             </Avatar>
                                             <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center">
                                                 <CheckCircle className="w-2 h-2 sm:w-3 sm:h-3 text-primary-foreground" />

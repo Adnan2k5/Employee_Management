@@ -12,6 +12,7 @@ import { Auth } from './security/Auth'
 import { UserLoggedIn } from './security/loginAuth'
 import { Loader } from './components/Loader'
 import EmployeeDashboard from './pages/dashboard'
+import ManagerDashboard from './pages/manager/dashboard'
 
 function App() {
 
@@ -50,7 +51,9 @@ function App() {
               <EmployeeDashboard />
             </Auth>
           } />
+          <Route path='/manager' element={<ManagerDashboard />} />
         </Routes>
+
       </BrowserRouter>
     </Provider >
   );
