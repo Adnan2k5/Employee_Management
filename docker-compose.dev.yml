@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./client
+      dockerfile: dockerfile
+    ports:
+      - "3000:5173"
+    depends_on:
+      - backend
+    networks:
+      - ems-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend/ems
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      # Database Configuration (using external MongoDB Atlas)
+      - SPRING_DATA_MONGODB_URI=${MONGODB_URI:-mongodb+srv://ashraf2k5:ashraf2k5@cluster0.dm3pf8j.mongodb.net/Employee_Management}
+
+      # Redis Configuration (using external Redis Cloud)
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis-14809.c273.us-east-1-2.ec2.redns.redis-cloud.com}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-14809}
+      - SPRING_DATA_REDIS_USERNAME=${REDIS_USERNAME:-default}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-ashraf2k5}
+
+      # Mail Configuration
+      - SPRING_MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - SPRING_MAIL_PORT=${MAIL_PORT:-587}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-ashraf2k5adnan@gmail.com}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-bieybzbnxelfgyhw}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+
+      # JVM Options
+      - JAVA_OPTS=${JAVA_OPTS:--Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0}
+
+      # Application Profile
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-docker}
+    networks:
+      - ems-network
+    restart: unless-stopped
+
+networks:
+  ems-network:
+    driver: bridge
+    name: ems-network

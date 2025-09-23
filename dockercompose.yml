@@ -1,0 +1,119 @@
+version: "3.8"
+
+services:
+  # Frontend Service (React/Vite)
+  frontend:
+    build:
+      context: ./client
+      dockerfile: dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ems-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Backend Service (Spring Boot)
+  backend:
+    build:
+      context: ./backend/ems
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Database Configuration (using external MongoDB Atlas)
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://ashraf2k5:ashraf2k5@cluster0.dm3pf8j.mongodb.net/Employee_Management
+
+      # Redis Configuration (using external Redis Cloud)
+      - SPRING_DATA_REDIS_HOST=redis-14809.c273.us-east-1-2.ec2.redns.redis-cloud.com
+      - SPRING_DATA_REDIS_PORT=14809
+      - SPRING_DATA_REDIS_USERNAME=default
+      - SPRING_DATA_REDIS_PASSWORD=ashraf2k5
+
+      # Mail Configuration
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=ashraf2k5adnan@gmail.com
+      - SPRING_MAIL_PASSWORD=bieybzbnxelfgyhw
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+
+      # JVM Options
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+
+      # Application Profile
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - ems-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Optional: Local MongoDB for development (commented out since you're using Atlas)
+  # mongodb:
+  #   image: mongo:7.0
+  #   container_name: ems-mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     - MONGO_INITDB_ROOT_USERNAME=admin
+  #     - MONGO_INITDB_ROOT_PASSWORD=password
+  #     - MONGO_INITDB_DATABASE=Employee_Management
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #     - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+  #   networks:
+  #     - ems-network
+  #   restart: unless-stopped
+
+  # Optional: Local Redis for development (commented out since you're using Redis Cloud)
+  # redis:
+  #   image: redis:7.2-alpine
+  #   container_name: ems-redis
+  #   ports:
+  #     - "6379:6379"
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - ems-network
+  #   restart: unless-stopped
+
+  # Optional: Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: ems-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - ems-network
+    restart: unless-stopped
+
+networks:
+  ems-network:
+    driver: bridge
+    name: ems-network
+# Uncomment if using local databases
+# volumes:
+#   mongodb_data:
+#     driver: local
+#   redis_data:
+#     driver: local

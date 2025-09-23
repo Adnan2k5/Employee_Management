@@ -44,6 +44,11 @@ public class authController {
         return ResponseEntity.status(HttpStatus.CREATED).body("OTP sent to email");
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<?> test() {
+        return ResponseEntity.ok("Backend is working!");
+    }
+
     @PostMapping("/verify")
     public ResponseEntity<?> verify(@RequestBody AuthRequest req, HttpServletResponse response) {
         String storedOtp = otpService.redisTemplate.opsForValue().get(req.getEmail());
@@ -69,8 +74,15 @@ public class authController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req, HttpServletResponse response) {
+        System.out.println("Login attempt for email: " + req.getEmail());
         userModel user = userRepository.findByEmail(req.getEmail()).orElse(null);
-        if (user != null && encoder.matches(req.getPassword(), user.getPassword())) {
+        if (user == null) {
+            System.out.println("User not found for email: " + req.getEmail());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
+        }
+        System.out.println("User found: " + user.getEmail());
+        if (encoder.matches(req.getPassword(), user.getPassword())) {
+            System.out.println("Password matches for user: " + req.getEmail());
             String token = jwtUtil.generateToken(user.getEmail());
             Cookie cookie = new Cookie("access-token", token);
             cookie.setHttpOnly(true);
@@ -79,6 +91,7 @@ public class authController {
             response.addCookie(cookie);
             return ResponseEntity.status(HttpStatus.OK).body("Login successful");
         }
+        System.out.println("Password does not match for user: " + req.getEmail());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
     }
 
