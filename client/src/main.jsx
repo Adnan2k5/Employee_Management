@@ -1,9 +1,9 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { Routes, BrowserRouter, Route } from 'react-router-dom'
-import { LandingPage } from './pages/LandingPage'
-import { Login } from './pages/auth/Login'
-import { Register } from './pages/auth/Register'
+import { LandingPage } from './Pages/LandingPage'
+import { Login } from './Pages/Auth/Login';
+import { Register } from './Pages/Auth/Register'
 import { useEffect, useState } from 'react'
 import { Provider } from 'react-redux'
 import store, { clearUser, setUser, setLoading } from './context/userContext'
@@ -11,8 +11,8 @@ import { validateUser } from './api/authcontroller'
 import { Auth } from './security/Auth'
 import { UserLoggedIn } from './security/loginAuth'
 import { Loader } from './components/Loader'
-import EmployeeDashboard from './pages/dashboard'
-import ManagerDashboard from './pages/manager/dashboard'
+import EmployeeDashboard from './Pages/dashboard/index'
+import ManagerDashboard from './Pages/manager/dashboard'
 
 function App() {
 

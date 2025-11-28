@@ -1,0 +1,255 @@
+---
+# Ansible Playbook for Deploying Employee Management System to Kubernetes
+# This playbook handles building Docker images, pushing them, and deploying to K8s
+
+- name: Deploy Employee Management System to Kubernetes
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    k8s_manifests_dir: "{{ project_root }}/k8s"
+    backend_dir: "{{ project_root }}/backend/ems"
+    frontend_dir: "{{ project_root }}/client"
+    k8s_namespace: ems
+    backend_image: ems-backend:latest
+    frontend_image: ems-frontend:latest
+    # Set to true if using a private registry
+    use_private_registry: false
+    # docker_registry: "registry.example.com"
+    # docker_username: "username"
+    # docker_password: "password"
+
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg: |
+          Starting deployment of Employee Management System
+          Namespace: {{ k8s_namespace }}
+          Backend Image: {{ backend_image }}
+          Frontend Image: {{ frontend_image }}
+
+    # Check Prerequisites
+    - name: Check if kubectl is installed
+      command: kubectl version --client
+      register: kubectl_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if kubectl is not installed
+      fail:
+        msg: "kubectl is not installed. Please install kubectl first."
+      when: kubectl_check.rc != 0
+
+    - name: Check if Docker is installed
+      command: docker --version
+      register: docker_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if Docker is not installed
+      fail:
+        msg: "Docker is not installed. Please install Docker first."
+      when: docker_check.rc != 0
+
+    - name: Check Kubernetes cluster connectivity
+      command: kubectl cluster-info
+      register: cluster_info
+      changed_when: false
+      failed_when: false
+
+    - name: Display cluster information
+      debug:
+        var: cluster_info.stdout_lines
+      when: cluster_info.rc == 0
+
+    # Build Docker Images
+    - name: Build Backend Docker Image
+      community.docker.docker_image:
+        name: "{{ backend_image.split(':')[0] }}"
+        tag: "{{ backend_image.split(':')[1] }}"
+        build:
+          path: "{{ backend_dir }}"
+          dockerfile: Dockerfile
+        source: build
+        state: present
+        force_source: yes
+      register: backend_build
+
+    - name: Build Frontend Docker Image
+      community.docker.docker_image:
+        name: "{{ frontend_image.split(':')[0] }}"
+        tag: "{{ frontend_image.split(':')[1] }}"
+        build:
+          path: "{{ frontend_dir }}"
+          dockerfile: dockerfile
+        source: build
+        state: present
+        force_source: yes
+      register: frontend_build
+
+    - name: Display build results
+      debug:
+        msg: |
+          Backend build: {{ 'Success' if backend_build.changed else 'Already exists' }}
+          Frontend build: {{ 'Success' if frontend_build.changed else 'Already exists' }}
+
+    # Optional: Push to private registry
+    - name: Login to Docker Registry
+      community.docker.docker_login:
+        registry_url: "{{ docker_registry }}"
+        username: "{{ docker_username }}"
+        password: "{{ docker_password }}"
+      when: use_private_registry | bool
+
+    - name: Tag and push backend image
+      community.docker.docker_image:
+        name: "{{ backend_image }}"
+        repository: "{{ docker_registry }}/{{ backend_image }}"
+        push: yes
+        source: local
+      when: use_private_registry | bool
+
+    - name: Tag and push frontend image
+      community.docker.docker_image:
+        name: "{{ frontend_image }}"
+        repository: "{{ docker_registry }}/{{ frontend_image }}"
+        push: yes
+        source: local
+      when: use_private_registry | bool
+
+    # Deploy to Kubernetes
+    - name: Create namespace
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubectl_config_path }}"
+        state: present
+        src: "{{ k8s_manifests_dir }}/00-namespace.yaml"
+
+    - name: Apply ConfigMap
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubectl_config_path }}"
+        state: present
+        src: "{{ k8s_manifests_dir }}/01-configmap.yaml"
+
+    - name: Apply Secrets
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubectl_config_path }}"
+        state: present
+        src: "{{ k8s_manifests_dir }}/02-secrets.yaml"
+
+    - name: Deploy Backend
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubectl_config_path }}"
+        state: present
+        src: "{{ k8s_manifests_dir }}/03-backend-deployment.yaml"
+
+    - name: Deploy Frontend
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubectl_config_path }}"
+        state: present
+        src: "{{ k8s_manifests_dir }}/04-frontend-deployment.yaml"
+
+    - name: Apply Ingress
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubectl_config_path }}"
+        state: present
+        src: "{{ k8s_manifests_dir }}/05-ingress.yaml"
+
+    - name: Wait for backend deployment to be ready
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubectl_config_path }}"
+        api_version: apps/v1
+        kind: Deployment
+        name: ems-backend
+        namespace: "{{ k8s_namespace }}"
+      register: backend_deployment
+      until: backend_deployment.resources[0].status.readyReplicas is defined and backend_deployment.resources[0].status.readyReplicas == backend_deployment.resources[0].spec.replicas
+      retries: 30
+      delay: 10
+
+    - name: Wait for frontend deployment to be ready
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubectl_config_path }}"
+        api_version: apps/v1
+        kind: Deployment
+        name: ems-frontend
+        namespace: "{{ k8s_namespace }}"
+      register: frontend_deployment
+      until: frontend_deployment.resources[0].status.readyReplicas is defined and frontend_deployment.resources[0].status.readyReplicas == frontend_deployment.resources[0].spec.replicas
+      retries: 30
+      delay: 10
+
+    - name: Get all pods in namespace
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubectl_config_path }}"
+        api_version: v1
+        kind: Pod
+        namespace: "{{ k8s_namespace }}"
+      register: pods
+
+    - name: Display pod status
+      debug:
+        msg: |
+          Pod Name: {{ item.metadata.name }}
+          Status: {{ item.status.phase }}
+          Ready: {{ item.status.conditions | selectattr('type', 'equalto', 'Ready') | map(attribute='status') | first | default('Unknown') }}
+      loop: "{{ pods.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Get services
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubectl_config_path }}"
+        api_version: v1
+        kind: Service
+        namespace: "{{ k8s_namespace }}"
+      register: services
+
+    - name: Display services
+      debug:
+        msg: |
+          Service Name: {{ item.metadata.name }}
+          Type: {{ item.spec.type }}
+          Cluster IP: {{ item.spec.clusterIP }}
+          Ports: {{ item.spec.ports | map(attribute='port') | list }}
+      loop: "{{ services.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Get ingress information
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubectl_config_path }}"
+        api_version: networking.k8s.io/v1
+        kind: Ingress
+        namespace: "{{ k8s_namespace }}"
+      register: ingress_info
+
+    - name: Display ingress information
+      debug:
+        msg: |
+          Ingress Name: {{ item.metadata.name }}
+          Host: {{ item.spec.rules[0].host | default('Not configured') }}
+          Status: {{ item.status | default('Pending') }}
+      loop: "{{ ingress_info.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+      when: ingress_info.resources | length > 0
+
+    - name: Deployment Summary
+      debug:
+        msg: |
+          =========================================
+          Deployment Complete!
+          =========================================
+          Namespace: {{ k8s_namespace }}
+          Backend Pods Ready: {{ backend_deployment.resources[0].status.readyReplicas | default(0) }}/{{ backend_deployment.resources[0].spec.replicas }}
+          Frontend Pods Ready: {{ frontend_deployment.resources[0].status.readyReplicas | default(0) }}/{{ frontend_deployment.resources[0].spec.replicas }}
+
+          To access the application:
+          1. Add 'ems.local' to your /etc/hosts file pointing to your ingress IP
+          2. Access the application at http://ems.local
+
+          Useful commands:
+          - kubectl get all -n {{ k8s_namespace }}
+          - kubectl logs -n {{ k8s_namespace }} -l app=ems-backend
+          - kubectl logs -n {{ k8s_namespace }} -l app=ems-frontend
+          - kubectl describe ingress -n {{ k8s_namespace }}

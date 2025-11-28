@@ -4,7 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import lombok.Data;
+import server.ems.dto.AuthRequestDTO;
+import server.ems.dto.UserResponseDTO;
 import server.ems.models.userModel;
 import server.ems.repository.userRepo;
 import server.ems.services.OtpService;
@@ -34,7 +35,7 @@ public class authController {
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody AuthRequest req){
+    public ResponseEntity<?> register(@RequestBody AuthRequestDTO req){
         if(userRepository.findByEmail(req.getEmail()).isPresent()){
             return ResponseEntity.badRequest().body("User already exists");
         }
@@ -50,7 +51,7 @@ public class authController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<?> verify(@RequestBody AuthRequest req, HttpServletResponse response) {
+    public ResponseEntity<?> verify(@RequestBody AuthRequestDTO req, HttpServletResponse response) {
         String storedOtp = otpService.redisTemplate.opsForValue().get(req.getEmail());
         if (storedOtp == null || !storedOtp.equals(req.getOtp())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired OTP");
@@ -73,16 +74,12 @@ public class authController {
     
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest req, HttpServletResponse response) {
-        System.out.println("Login attempt for email: " + req.getEmail());
+    public ResponseEntity<?> login(@RequestBody AuthRequestDTO req, HttpServletResponse response) {
         userModel user = userRepository.findByEmail(req.getEmail()).orElse(null);
         if (user == null) {
-            System.out.println("User not found for email: " + req.getEmail());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
         }
-        System.out.println("User found: " + user.getEmail());
         if (encoder.matches(req.getPassword(), user.getPassword())) {
-            System.out.println("Password matches for user: " + req.getEmail());
             String token = jwtUtil.generateToken(user.getEmail());
             Cookie cookie = new Cookie("access-token", token);
             cookie.setHttpOnly(true);
@@ -106,7 +103,7 @@ public class authController {
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
             }
-            UserResponse userResponse = new UserResponse();
+            UserResponseDTO userResponse = new UserResponseDTO();
 
             userResponse.setId(user.getId());
             userResponse.setEmail(user.getEmail());
@@ -117,26 +114,4 @@ public class authController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
         }
     }
-}
-
-
-@Data
-class AuthRequest{
-    private String email;
-    private String password;
-    private String otp;
-    private String name;
-}
-
-@Data
-class AuthResponse{
-    private final String token;
-}
-
-@Data
-class UserResponse{
-    private String id;
-    private String email;
-    private String role;
-    private String name;
 }

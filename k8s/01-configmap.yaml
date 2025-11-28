@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ems-backend-config
+  namespace: ems
+data:
+  # Redis Configuration
+  SPRING_DATA_REDIS_HOST: "redis-14809.c273.us-east-1-2.ec2.redns.redis-cloud.com"
+  SPRING_DATA_REDIS_PORT: "14809"
+  SPRING_DATA_REDIS_USERNAME: "default"
+
+  # Mail Configuration
+  SPRING_MAIL_HOST: "smtp.gmail.com"
+  SPRING_MAIL_PORT: "587"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+
+  # JVM Options
+  JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  # Application Profile
+  SPRING_PROFILES_ACTIVE: "production"

@@ -1,0 +1,68 @@
+---
+# Ansible Playbook to Destroy/Remove Employee Management System from Kubernetes
+
+- name: Remove Employee Management System from Kubernetes
+  hosts: localhost
+  gather_facts: no
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    k8s_manifests_dir: "{{ project_root }}/k8s"
+    namespace: ems
+
+  tasks:
+    - name: Display removal information
+      debug:
+        msg: "Removing Employee Management System from namespace: {{ namespace }}"
+
+    - name: Remove Ingress
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ k8s_manifests_dir }}/05-ingress.yaml"
+
+    - name: Remove Frontend Deployment
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ k8s_manifests_dir }}/04-frontend-deployment.yaml"
+
+    - name: Remove Backend Deployment
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ k8s_manifests_dir }}/03-backend-deployment.yaml"
+
+    - name: Wait for pods to terminate
+      pause:
+        seconds: 30
+
+    - name: Remove Secrets
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ k8s_manifests_dir }}/02-secrets.yaml"
+
+    - name: Remove ConfigMap
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ k8s_manifests_dir }}/01-configmap.yaml"
+
+    - name: Remove Namespace
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ k8s_manifests_dir }}/00-namespace.yaml"
+
+    - name: Verify namespace deletion
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+      register: namespace_check
+      until: namespace_check.resources | length == 0
+      retries: 10
+      delay: 5
+      ignore_errors: yes
+
+    - name: Cleanup Summary
+      debug:
+        msg: |
+          =========================================
+          Cleanup Complete!
+          =========================================
+          All resources from namespace '{{ namespace }}' have been removed.

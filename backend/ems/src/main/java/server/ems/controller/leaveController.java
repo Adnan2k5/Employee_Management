@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-import lombok.Data;
+import server.ems.dto.LeaveRequestDTO;
 import server.ems.models.leaveModel;
 import server.ems.models.userModel;
 import server.ems.repository.userRepo;
@@ -28,7 +28,7 @@ public class leaveController {
     private leaveRepo leaveRepository;
 
     @PostMapping("/submitLeave")
-    public ResponseEntity<?> createLeaveRequest(@RequestBody LeaveRequest req){
+    public ResponseEntity<?> createLeaveRequest(@RequestBody LeaveRequestDTO req){
         userModel user = userRepository.findByEmail(req.getEmployeeMail()).orElse(null);
         if (user == null) {
             throw new RuntimeException("User not found");
@@ -58,15 +58,4 @@ public class leaveController {
         emailService.sendIndividualMail(to, subject, body);
         return ResponseEntity.status(HttpStatus.OK).body("Leave request submitted successfully");
     }
-}
-
-
-@Data
-class LeaveRequest{
-    private String employeeMail;
-    private String startDate;
-    private String endDate;
-    private String reason;
-    private String status;
-    private String type; // "single" for one day, "range" for multiple dates
 }

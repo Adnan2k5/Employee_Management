@@ -92,7 +92,7 @@ export default function EmployeeDashboard() {
                                                     Team Lead
                                                 </Badge>
                                                 <Badge variant="secondary" className="bg-chart-2/10 text-chart-2">
-                                                    {user?.role.charAt(0).toUpperCase() + user?.role.slice(1)}
+                                                    {user?.role?.charAt(0).toUpperCase() + user?.role.slice(1)}
                                                 </Badge>
                                             </div>
                                         </div>
